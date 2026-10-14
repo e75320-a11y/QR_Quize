@@ -1,0 +1,79 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <title>퀴즈 참가</title>
+  <link rel="stylesheet" href="/style.css" />
+  <link rel="stylesheet" href="/player.css" />
+</head>
+<body class="player-body">
+  <!-- 이름 입력 화면 -->
+  <div class="screen" id="nameScreen">
+    <div class="p-card">
+      <div class="p-emoji">🏆</div>
+      <h1 class="p-title">온라인 퀴즈<br />서바이벌</h1>
+      <p class="p-sub">맞추면 다음 문제! 틀리면 탈락!</p>
+      <input class="p-input" id="nameInput" type="text" maxlength="20" placeholder="이름을 입력하세요" autocomplete="off" />
+      <button class="p-btn" id="joinBtn">참가하기 🚀</button>
+      <p class="p-error" id="joinError"></p>
+    </div>
+  </div>
+
+  <!-- 대기 화면 -->
+  <div class="screen" id="waitingScreen" hidden>
+    <div class="p-card">
+      <div class="p-emoji">👋</div>
+      <h1 class="p-title"><span id="waitName">플레이어</span>님,<br />환영합니다!</h1>
+      <p class="p-sub">곧 게임이 시작됩니다. 준비하세요!</p>
+      <div class="p-waiting-dots"><span></span><span></span><span></span></div>
+    </div>
+  </div>
+
+  <!-- 문제 화면 -->
+  <div class="screen" id="questionScreen" hidden>
+    <div class="p-q-top">
+      <div class="p-q-num" id="qNum">문제 1</div>
+      <div class="p-q-progress" id="qProgress"></div>
+    </div>
+    <div class="p-card p-q-card">
+      <h2 class="p-q-text" id="qText"></h2>
+      <div class="p-options" id="options"></div>
+    </div>
+  </div>
+
+  <!-- 결과 피드백 (오버레이) -->
+  <div class="p-overlay" id="resultOverlay" hidden>
+    <div class="p-overlay-card" id="resultCard">
+      <div class="p-overlay-emoji" id="resultEmoji"></div>
+      <h2 class="p-overlay-title" id="resultTitle"></h2>
+      <p class="p-overlay-sub" id="resultSub"></p>
+    </div>
+  </div>
+
+  <!-- 탈락 화면 -->
+  <div class="screen" id="lostScreen" hidden>
+    <div class="p-card">
+      <div class="p-emoji">😢</div>
+      <h1 class="p-title">아쉽지만 오답입니다!</h1>
+      <p class="p-sub">정답은 <strong id="lostAnswer"></strong> 입니다</p>
+      <p class="p-sub">다음 기회에 다시 도전하세요!</p>
+    </div>
+  </div>
+
+  <!-- 우승 화면 -->
+  <div class="screen" id="wonScreen" hidden>
+    <div class="p-card">
+      <div class="p-emoji">🎉</div>
+      <h1 class="p-title">축하합니다!<br />최종 생존자입니다!</h1>
+      <p class="p-sub">끝까지 살아남으셨습니다!</p>
+    </div>
+  </div>
+
+  <!-- Firebase SDK -->
+  <script src="https://www.gstatic.com/firebasejs/10.12.5/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.5/firebase-database-compat.js"></script>
+  <script src="/firebase-config.js"></script>
+  <script src="/player.js"></script>
+</body>
+</html>
