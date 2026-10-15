@@ -1,0 +1,134 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>온라인 QR 퀴즈 서바이벌 - 관리자</title>
+  <link rel="stylesheet" href="/style.css" />
+</head>
+<body>
+  <header>
+    <div class="brand">
+      <div class="logo">🏆</div>
+      <div>
+        <h1>온라인 QR 퀴즈 서바이벌</h1>
+        <p>맞추면 다음 문제, 틀리면 탈락!</p>
+      </div>
+    </div>
+    <div class="badge waiting" id="statusBadge">
+      <span class="dot"></span><span id="statusText">대기 중</span>
+    </div>
+  </header>
+
+  <div class="container">
+    <div class="grid">
+      <!-- 좌측: QR + 설정 + 컨트롤 -->
+      <div class="col">
+        <div class="card">
+          <h2><span class="ico">📱</span> 참가 QR 코드</h2>
+          <div class="qr-box">
+            <img id="qrImage" src="" alt="QR 코드" />
+            <div class="qr-url">
+              <input id="qrUrl" type="text" readonly />
+              <button id="copyBtn">복사</button>
+            </div>
+          </div>
+          <div class="qr-hint">휴대폰으로 QR을 스캔하면 참가 화면이 열립니다</div>
+        </div>
+
+        <div class="card">
+          <h2><span class="ico">⚙️</span> 게임 설정</h2>
+          <div class="setting-row">
+            <div>
+              <div class="label">🏁 종료 기준 인원</div>
+              <div class="sub">이 인원만큼 남으면 게임이 종료됩니다</div>
+            </div>
+            <div class="num-input">
+              <button id="targetMinus">−</button>
+              <input id="targetInput" type="number" min="1" value="5" />
+              <button id="targetPlus">＋</button>
+            </div>
+          </div>
+          <div class="setting-row">
+            <div>
+              <div class="label">🔀 문제 무작위 출제</div>
+              <div class="sub">문제를 섞어서 랜덤 순서로 출제합니다</div>
+            </div>
+            <label class="switch">
+              <input type="checkbox" id="shuffleToggle" checked />
+              <span class="slider"></span>
+            </label>
+          </div>
+        </div>
+
+        <div class="card">
+          <h2><span class="ico">🎮</span> 게임 컨트롤</h2>
+          <div class="btn-row">
+            <button class="btn btn-success" id="startBtn">🚀 게임 시작</button>
+            <button class="btn btn-primary" id="nextBtn" disabled>다음 문제 ➡️</button>
+          </div>
+          <div class="btn-row" style="margin-top:10px">
+            <button class="btn btn-ghost" id="resetBtn">🔄 초기화</button>
+            <button class="btn btn-danger" id="finishBtn" disabled>🏁 즉시 종료</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- 우측: 통계 + 명단 + 문제 관리 -->
+      <div class="col">
+        <div class="stats">
+          <div class="stat c-cyan">
+            <div class="num" id="statPlayers">0</div>
+            <div class="cap">📶 접속자 수</div>
+          </div>
+          <div class="stat c-accent">
+            <div class="num" id="statQuestion">0</div>
+            <div class="cap">📝 현재 문제</div>
+          </div>
+          <div class="stat c-red">
+            <div class="num" id="statEliminated">0</div>
+            <div class="cap">❌ 탈락 인원</div>
+          </div>
+          <div class="stat c-green">
+            <div class="num" id="statAlive">0</div>
+            <div class="cap">✅ 남은 인원</div>
+          </div>
+        </div>
+
+        <div class="card">
+          <h2><span class="ico">👥</span> 남은 인원 명단</h2>
+          <div class="chips" id="aliveChips"></div>
+          <div class="empty" id="aliveEmpty">아직 참가자가 없습니다</div>
+        </div>
+
+        <div class="card">
+          <h2><span class="ico">📚</span> 문제 관리</h2>
+          <div class="q-form">
+            <textarea id="qText" placeholder="문제 내용을 입력하세요"></textarea>
+            <div class="opt-grid">
+              <label class="opt"><span class="num">1</span><input id="opt0" type="text" placeholder="보기 1" /></label>
+              <label class="opt"><span class="num">2</span><input id="opt1" type="text" placeholder="보기 2" /></label>
+              <label class="opt"><span class="num">3</span><input id="opt2" type="text" placeholder="보기 3 (선택)" /></label>
+              <label class="opt"><span class="num">4</span><input id="opt3" type="text" placeholder="보기 4 (선택)" /></label>
+            </div>
+            <div class="answer-select">
+              <select id="answerSelect">
+                <option value="0">정답: 보기 1</option>
+                <option value="1">정답: 보기 2</option>
+                <option value="2">정답: 보기 3</option>
+                <option value="3">정답: 보기 4</option>
+              </select>
+            </div>
+            <button class="btn btn-primary" id="addQuestionBtn">➕ 문제 추가</button>
+          </div>
+          <div class="q-list" id="questionList"></div>
+          <div class="muted-note">💡 보기는 2개 이상 입력해야 합니다. 추가된 문제는 자동 저장됩니다.</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script src="/socket.io/socket.io.js"></script>
+  <script src="/admin.js"></script>
+</body>
+</html>
