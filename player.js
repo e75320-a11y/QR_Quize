@@ -145,6 +145,7 @@ function render() {
     qText.textContent = current.question;
     renderOptions(current.options);
     show('question');
+    return; // 새 문제는 항상 클릭 가능한 상태로 렌더링
   }
 
   // 오답 처리
@@ -176,12 +177,6 @@ function render() {
     setTimeout(() => { resultOverlay.hidden = true; }, 1500);
     return;
   }
-
-  // 응답 제출 후 결과 대기
-  if (me.answer != null || me.result) {
-    answered = true;
-    disableOptions();
-  }
 }
 
 function renderOptions(opts) {
@@ -191,7 +186,7 @@ function renderOptions(opts) {
     btn.className = 'p-option';
     btn.innerHTML = `<span class="o-num">${i + 1}</span><span>${escapeHtml(opt)}</span>`;
     btn.addEventListener('click', async () => {
-      if (answered || me.answer != null) return;
+      if (answered) return;
       answered = true;
       disableOptions();
       await supabase.from('players').update({ answer: i }).eq('id', myId);
