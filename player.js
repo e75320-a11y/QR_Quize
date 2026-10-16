@@ -46,10 +46,15 @@ supabase
   .on('postgres_changes', { event: '*', schema: 'public', table: 'game' }, () => { refreshGame(); })
   .subscribe();
 
-supabase
-  .channel('player-me')
-  .on('postgres_changes', { event: '*', schema: 'public', table: 'players', filter: myId ? `id=eq.${myId}` : 'id=eq.00000000-0000-0000-0000-000000000000' }, () => { refreshMe(); })
-  .subscribe();
+let meChannel = null;
+function subscribeMe() {
+  if (meChannel) { supabase.removeChannel(meChannel); meChannel = null; }
+  if (!myId) return;
+  meChannel = supabase
+    .channel('me-' + myId)
+    .on('postgres_changes', { event: '*', schema: 'public', table: 'players', filter: 'id=eq.' + myId }, () => { refreshMe(); })
+    .subscribe();
+}
 
 async function refreshGame() {
   const { data } = await supabase.from('game').select('status, current').eq('id', 1).maybeSingle();
@@ -75,6 +80,18 @@ async function refreshMe() {
 }
 
 /* ---------- 이름 입력 ---------- */
+function generateId() {
+  if (window.crypto && typeof crypto.randomUUID === 'function') {
+    return crypto.randomUUID();
+  }
+  // 구형 브라우저 대비 UUID 생성
+  return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, (c) => {
+    const r = (Math.random() * 16) | 0;
+    const v = c === 'x' ? r : (r & 0x3) | 0x8;
+    return v.toString(16);
+  });
+}
+
 joinBtn.addEventListener('click', async () => {
   const name = nameInput.value.trim();
   if (!name) {
@@ -84,21 +101,24 @@ joinBtn.addEventListener('click', async () => {
   joinError.textContent = '';
   joinBtn.disabled = true;
 
-  const id = crypto.randomUUID();
-  const { error } = await supabase.from('players').insert({
-    id, name, alive: true, answer: null, result: null, correct_answer: null,
-  });
+  try {
+    const id = generateId();
+    const { error } = await supabase.from('players').insert({
+      id, name, alive: true, answer: null, result: null, correct_answer: null,
+    });
 
-  if (error) {
-    joinError.textContent = '참가에 실패했습니다. 다시 시도해주세요.';
+    if (error) throw error;
+
+    localStorage.setItem('pid', id);
+    myId = id;
+    subscribeMe();      // 내 행 실시간 구독 재설정
+    await refreshMe();  // 대기 화면으로 전환
     joinBtn.disabled = false;
-    return;
+  } catch (err) {
+    console.error(err);
+    joinError.textContent = '참가에 실패했습니다. 잠시 후 다시 시도해주세요.';
+    joinBtn.disabled = false;
   }
-
-  localStorage.setItem('pid', id);
-  myId = id;
-  await refreshMe();
-  joinBtn.disabled = false;
 });
 
 nameInput.addEventListener('keydown', (e) => {
@@ -196,6 +216,9 @@ function escapeHtml(str) {
 }
 
 /* 초기 로드 */
-if (myId) refreshMe();
+if (myId) {
+  subscribeMe();
+  refreshMe();
+}
 refreshGame();
 show('name');
