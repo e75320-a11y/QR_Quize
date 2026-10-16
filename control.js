@@ -138,12 +138,10 @@ async function startGame() {
 
   const order = game.shuffle ? shuffle(questions.map((q) => q.id)) : questions.map((q) => q.id);
 
-  // 모든 플레이어 초기화
-  for (const p of Object.values(players)) {
-    await supabase.from('players').update({
-      alive: true, answer: null, result: null, correct_answer: null,
-    }).eq('id', p.id);
-  }
+  // 모든 플레이어 초기화 (단일 쿼리)
+  await supabase.from('players').update({
+    alive: true, answer: null, result: null, correct_answer: null,
+  }).neq('id', '00000000-0000-0000-0000-000000000000');
 
   await supabase.from('game').update({
     question_order: order, current_number: 0, status: 'playing', current: null,
@@ -163,6 +161,11 @@ async function nextQuestion() {
   const qid = game.question_order[num - 1];
   const q = questions.find((x) => x.id === qid);
   if (!q) { await finishGame(); return; }
+
+  // 새 문제로 넘어갈 때 살아있는 플레이어의 응답/결과 초기화 (단일 쿼리)
+  await supabase.from('players').update({
+    answer: null, result: null, correct_answer: null,
+  }).eq('alive', true);
 
   const cur = { number: num, total: game.question_order.length, question: q.question, options: q.options, qid };
   await supabase.from('game').update({ current_number: num, current: cur }).eq('id', 1);
