@@ -37,6 +37,11 @@ const aliveChips = $('aliveChips');
 const aliveEmpty = $('aliveEmpty');
 const refreshNamesBtn = $('refreshNamesBtn');
 
+const apAnswered = $('apAnswered');
+const apAlive = $('apAlive');
+const apFill = $('apFill');
+const apSub = $('apSub');
+
 /* ---------- 데이터 로드 ---------- */
 async function loadQuestions() {
   const { data, error } = await supabase.from('questions').select('*').order('id', { ascending: true });
@@ -221,12 +226,22 @@ function render() {
   const aliveCount = aliveArr.length;
   const playerCount = arr.length;
   const correctCount = arr.filter((p) => p.result === 'correct').length;
+  const answeredTotal = arr.filter((p) => p.answer != null).length;
 
   statPlayers.textContent = playerCount;
   statQuestion.textContent = game.status === 'waiting' ? '-' : `${game.current_number} / ${game.question_order.length}`;
   statCorrect.textContent = correctCount;
   statEliminated.textContent = playerCount - aliveCount;
   statAlive.textContent = aliveCount;
+
+  // 현재 문제 응답 현황
+  apAnswered.textContent = answeredTotal;
+  apAlive.textContent = aliveCount;
+  const pct = aliveCount > 0 ? Math.round((answeredTotal / aliveCount) * 100) : 0;
+  apFill.style.width = pct + '%';
+  apSub.textContent = game.status === 'playing'
+    ? `정답자 ${correctCount}명 · 응답 ${answeredTotal}명 / 남은 ${aliveCount}명`
+    : (game.status === 'finished' ? '게임이 종료되었습니다' : '게임 시작 전입니다');
 
   // 컨트롤 버튼
   const playing = game.status === 'playing';
