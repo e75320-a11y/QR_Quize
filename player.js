@@ -222,3 +222,7 @@ if (myId) {
 }
 refreshGame();
 show('name');
+
+/* 폴링 안전장치: 실시간 구독이 동작하지 않아도 일정 간격으로 갱신 */
+setInterval(refreshGame, 2500);
+setInterval(() => { if (myId) refreshMe(); }, 2500);
