@@ -1,16 +1,22 @@
-import { supabase } from './supabase-config.js';
+const db = firebase.database();
 
-/* 로컬 상태 */
+const refs = {
+  questions: db.ref('questions'),
+  players: db.ref('players'),
+  game: db.ref('game'),
+};
+
+/* 로컬 상태 (DB와 동기화) */
 let questions = []; // {id, question, options, answer}
-let players = {};   // id -> {id, name, alive, answer, result, correct_answer}
+let players = {};   // pid -> {name, alive, answer, result, correctAnswer}
 let game = {
   status: 'waiting',
-  current_number: 0,
-  question_order: [],
-  target_remaining: 5,
+  currentNumber: 0,
+  order: [],
+  targetRemaining: 5,
   shuffle: true,
 };
-let current = null; // game.current
+let current = null; // /game/current
 
 /* DOM */
 const $ = (id) => document.getElementById(id);
@@ -71,81 +77,71 @@ copyBtn.addEventListener('click', async () => {
   }
 });
 
-/* ---------- 데이터 로드 ---------- */
-async function loadQuestions() {
-  const { data, error } = await supabase.from('questions').select('*').order('id', { ascending: true });
-  if (error) console.error(error);
-  questions = data || [];
+/* ---------- 데이터 리스너 ---------- */
+refs.questions.on('value', (snap) => {
+  questions = [];
+  snap.forEach((c) => questions.push({ id: c.key, ...c.val() }));
   render();
-}
+});
 
-async function refreshPlayers() {
-  const { data } = await supabase.from('players').select('*');
+refs.players.on('value', (snap) => {
   players = {};
-  (data || []).forEach((p) => { players[p.id] = p; });
-  await checkAnswers();
+  snap.forEach((c) => { players[c.key] = c.val(); });
+  checkAnswers();
   render();
-}
+});
 
-async function refreshGame() {
-  const { data } = await supabase.from('game').select('*').eq('id', 1).maybeSingle();
-  const v = data || {};
+refs.game.on('value', (snap) => {
+  const v = snap.val() || {};
   game = {
     status: v.status || 'waiting',
-    current_number: v.current_number || 0,
-    question_order: v.question_order || [],
-    target_remaining: v.target_remaining || 5,
+    currentNumber: v.currentNumber || 0,
+    order: v.order || [],
+    targetRemaining: v.targetRemaining || 5,
     shuffle: typeof v.shuffle === 'undefined' ? true : v.shuffle,
   };
   current = v.current || null;
   render();
-}
+});
 
-/* 실시간 구독 */
-supabase
-  .channel('admin-players')
-  .on('postgres_changes', { event: '*', schema: 'public', table: 'players' }, () => { refreshPlayers(); })
-  .subscribe();
-
-supabase
-  .channel('admin-game')
-  .on('postgres_changes', { event: '*', schema: 'public', table: 'game' }, () => { refreshGame(); })
-  .subscribe();
+// 최초 실행 시 게임 노드 초기화
+refs.game.once('value', (snap) => {
+  const v = snap.val() || {};
+  const updates = {};
+  if (!v.status) updates.status = 'waiting';
+  if (!v.targetRemaining) updates.targetRemaining = 5;
+  if (typeof v.shuffle === 'undefined') updates.shuffle = true;
+  if (Object.keys(updates).length) refs.game.update(updates);
+});
 
 /* ---------- 정답 검사 (관리자 브라우저가 수행) ---------- */
-let checking = false;
-async function checkAnswers() {
-  if (checking) return;
+function checkAnswers() {
   if (game.status !== 'playing' || !current) return;
   const q = questions.find((x) => x.id === current.qid);
   if (!q) return;
 
-  checking = true;
-  try {
-    let changed = false;
-    for (const p of Object.values(players)) {
-      if (p.alive && p.answer != null && !p.result) {
-        const correct = Number(p.answer) === Number(q.answer);
-        const upd = { result: correct ? 'correct' : 'wrong' };
-        if (!correct) {
-          upd.alive = false;
-          upd.correct_answer = q.options[q.answer];
-        }
-        await supabase.from('players').update(upd).eq('id', p.id);
-        changed = true;
+  let changed = false;
+  Object.entries(players).forEach(([pid, p]) => {
+    if (p.alive && p.answer != null && !p.result) {
+      const correct = Number(p.answer) === Number(q.answer);
+      const upd = { result: correct ? 'correct' : 'wrong' };
+      if (!correct) {
+        upd.alive = false;
+        upd.correctAnswer = q.options[q.answer];
       }
+      refs.players.child(pid).update(upd);
+      changed = true;
     }
-    if (changed) await checkFinish();
-  } finally {
-    checking = false;
-  }
+  });
+
+  if (changed) checkFinish();
 }
 
-async function checkFinish() {
+function checkFinish() {
   if (game.status !== 'playing') return;
   const alive = Object.values(players).filter((p) => p.alive);
-  if (alive.length > 0 && alive.length <= game.target_remaining) {
-    await supabase.from('game').update({ status: 'finished' }).eq('id', 1);
+  if (alive.length > 0 && alive.length <= game.targetRemaining) {
+    refs.game.child('status').set('finished');
   }
 }
 
@@ -159,52 +155,51 @@ function shuffle(arr) {
   return a;
 }
 
-async function startGame() {
+function startGame() {
   if (questions.length === 0) { alert('먼저 문제를 추가해주세요.'); return; }
   if (Object.keys(players).length === 0) { alert('참가자가 없습니다.'); return; }
 
   const order = game.shuffle ? shuffle(questions.map((q) => q.id)) : questions.map((q) => q.id);
 
   // 모든 플레이어 초기화
-  for (const p of Object.values(players)) {
-    await supabase.from('players').update({
-      alive: true, answer: null, result: null, correct_answer: null,
-    }).eq('id', p.id);
-  }
+  const updates = {};
+  Object.entries(players).forEach(([pid]) => {
+    updates[pid + '/alive'] = true;
+    updates[pid + '/answer'] = null;
+    updates[pid + '/result'] = null;
+    updates[pid + '/correctAnswer'] = null;
+  });
+  refs.players.update(updates);
 
-  await supabase.from('game').update({
-    question_order: order, current_number: 0, status: 'playing', current: null,
-  }).eq('id', 1);
-
-  game.question_order = order;
-  game.current_number = 0;
+  game.order = order;
+  game.currentNumber = 0;
   game.status = 'playing';
-  await nextQuestion();
+  refs.game.update({ order, currentNumber: 0, status: 'playing', current: null });
+
+  nextQuestion();
 }
 
-async function nextQuestion() {
+function nextQuestion() {
   if (game.status !== 'playing') return;
-  const num = game.current_number + 1;
-  if (num > game.question_order.length) { await finishGame(); return; }
+  const num = game.currentNumber + 1;
+  if (num > game.order.length) { finishGame(); return; }
 
-  const qid = game.question_order[num - 1];
+  const qid = game.order[num - 1];
   const q = questions.find((x) => x.id === qid);
-  if (!q) { await finishGame(); return; }
+  if (!q) { finishGame(); return; }
 
-  const cur = { number: num, total: game.question_order.length, question: q.question, options: q.options, qid };
-  await supabase.from('game').update({ current_number: num, current: cur }).eq('id', 1);
-  game.current_number = num;
+  const cur = { number: num, total: game.order.length, question: q.question, options: q.options, qid };
+  game.currentNumber = num;
+  refs.game.update({ currentNumber: num, current: cur });
 }
 
-async function finishGame() {
-  await supabase.from('game').update({ status: 'finished' }).eq('id', 1);
+function finishGame() {
+  refs.game.child('status').set('finished');
 }
 
-async function resetGame() {
-  await supabase.from('players').delete().neq('id', '00000000-0000-0000-0000-000000000000');
-  await supabase.from('game').update({
-    status: 'waiting', current_number: 0, question_order: [], current: null,
-  }).eq('id', 1);
+function resetGame() {
+  refs.players.remove();
+  refs.game.remove();
 }
 
 startBtn.addEventListener('click', startGame);
@@ -217,14 +212,12 @@ resetBtn.addEventListener('click', () => {
 /* ---------- 설정 ---------- */
 function setTarget(v) {
   targetInput.value = v;
-  supabase.from('game').update({ target_remaining: v }).eq('id', 1);
+  refs.game.child('targetRemaining').set(v);
 }
 targetMinus.addEventListener('click', () => setTarget(Math.max(1, Number(targetInput.value) - 1)));
 targetPlus.addEventListener('click', () => setTarget(Number(targetInput.value) + 1));
 targetInput.addEventListener('change', () => setTarget(Math.max(1, Number(targetInput.value))));
-shuffleToggle.addEventListener('change', () => {
-  supabase.from('game').update({ shuffle: shuffleToggle.checked }).eq('id', 1);
-});
+shuffleToggle.addEventListener('change', () => refs.game.child('shuffle').set(shuffleToggle.checked));
 
 /* ---------- 문제 관리 ---------- */
 function updateAnswerSelect() {
@@ -236,7 +229,7 @@ function updateAnswerSelect() {
 }
 optInputs.forEach((i) => i.addEventListener('input', updateAnswerSelect));
 
-addQuestionBtn.addEventListener('click', async () => {
+addQuestionBtn.addEventListener('click', () => {
   const options = optInputs.map((i) => i.value.trim()).filter(Boolean);
   const question = qText.value.trim();
   const answer = Number(answerSelect.value);
@@ -246,14 +239,12 @@ addQuestionBtn.addEventListener('click', async () => {
     return;
   }
 
-  const { error } = await supabase.from('questions').insert({ question, options, answer });
-  if (error) { alert('문제 저장 실패: ' + error.message); return; }
-
-  qText.value = '';
-  optInputs.forEach((i) => (i.value = ''));
-  answerSelect.value = '0';
-  updateAnswerSelect();
-  await loadQuestions();
+  refs.questions.push({ question, options, answer }).then(() => {
+    qText.value = '';
+    optInputs.forEach((i) => (i.value = ''));
+    answerSelect.value = '0';
+    updateAnswerSelect();
+  });
 });
 
 /* ---------- 렌더링 ---------- */
@@ -270,7 +261,7 @@ function render() {
   const answeredTotal = arr.filter((p) => p.answer != null).length;
 
   statPlayers.textContent = playerCount;
-  statQuestion.textContent = game.status === 'waiting' ? '-' : `${game.current_number} / ${game.question_order.length}`;
+  statQuestion.textContent = game.status === 'waiting' ? '-' : `${game.currentNumber} / ${game.order.length}`;
   statCorrect.textContent = correctCount;
   statEliminated.textContent = playerCount - aliveCount;
   statAlive.textContent = aliveCount;
@@ -308,7 +299,7 @@ function render() {
   finishBtn.disabled = !playing;
 
   // 설정 반영
-  targetInput.value = game.target_remaining;
+  targetInput.value = game.targetRemaining;
   shuffleToggle.checked = game.shuffle;
 
   // 문제 목록
@@ -327,18 +318,10 @@ function render() {
     questionList.appendChild(item);
   });
   questionList.querySelectorAll('.del').forEach((btn) => {
-    btn.addEventListener('click', async () => {
-      await supabase.from('questions').delete().eq('id', btn.dataset.id);
-      await loadQuestions();
-    });
+    btn.addEventListener('click', () => refs.questions.child(btn.dataset.id).remove());
   });
 }
 
 function escapeHtml(str) {
   return String(str).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 }
-
-/* 초기 로드 */
-loadQuestions();
-refreshPlayers();
-refreshGame();
