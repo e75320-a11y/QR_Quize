@@ -226,7 +226,7 @@ function render() {
   const aliveCount = aliveArr.length;
   const playerCount = arr.length;
   const correctCount = arr.filter((p) => p.result === 'correct').length;
-  const answeredTotal = arr.filter((p) => p.answer != null).length;
+  const answeredTotal = arr.filter((p) => p.alive && p.answer != null).length;
 
   statPlayers.textContent = playerCount;
   statQuestion.textContent = game.status === 'waiting' ? '-' : `${game.current_number} / ${game.question_order.length}`;
