@@ -81,6 +81,19 @@ function render() {
       const chip = document.createElement('span');
       chip.className = 'chip';
       chip.innerHTML = `<span class="avatar">${escapeHtml(p.name[0] || '?')}</span>${escapeHtml(p.name)}`;
+
+      const del = document.createElement('button');
+      del.className = 'chip-del';
+      del.textContent = '✕';
+      del.title = '삭제';
+      del.addEventListener('click', async () => {
+        if (confirm(`'${p.name}' 님을 삭제할까요?`)) {
+          await supabase.from('players').delete().eq('id', p.id);
+          await refreshPlayers();
+        }
+      });
+
+      chip.appendChild(del);
       aliveChips.appendChild(chip);
     });
   }
