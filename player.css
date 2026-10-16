@@ -76,6 +76,13 @@
 .p-option.wrong .o-num { background: var(--red); color: #fff; border-color: var(--red); }
 .p-option.disabled { pointer-events: none; opacity: 0.7; }
 
+/* 제출 후 대기 메시지 */
+.p-waiting-others {
+  margin-top: 16px; padding: 12px 16px; border-radius: 12px;
+  background: rgba(99, 102, 241, 0.12); border: 1px solid rgba(99, 102, 241, 0.4);
+  color: #a5b4fc; font-size: 14px; font-weight: 700; text-align: center;
+}
+
 /* 오버레이 */
 .p-overlay {
   position: fixed; inset: 0; background: rgba(0, 0, 0, 0.7);

@@ -17,6 +17,7 @@ const qNum = $('qNum');
 const qProgress = $('qProgress');
 const qText = $('qText');
 const options = $('options');
+const waitingOthers = $('waitingOthers');
 const resultOverlay = $('resultOverlay');
 const resultCard = $('resultCard');
 const resultEmoji = $('resultEmoji');
@@ -144,8 +145,16 @@ function render() {
     qProgress.textContent = `${current.number} / ${current.total}`;
     qText.textContent = current.question;
     renderOptions(current.options);
+    waitingOthers.hidden = true; // 새 문제: 대기 메시지 숨김
     show('question');
     return; // 새 문제는 항상 클릭 가능한 상태로 렌더링
+  }
+
+  // 제출 후 다른 참가자 대기 표시
+  if (me.answer != null && !me.result) {
+    waitingOthers.hidden = false;
+  } else {
+    waitingOthers.hidden = true;
   }
 
   // 오답 처리

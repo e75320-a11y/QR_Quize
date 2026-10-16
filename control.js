@@ -93,21 +93,26 @@ async function checkAnswers() {
   const q = questions.find((x) => x.id === current.qid);
   if (!q) return;
 
+  const aliveArr = Object.values(players).filter((p) => p.alive);
+  if (aliveArr.length === 0) return;
+
+  // 모든 살아있는 플레이어가 응답할 때까지 기다림
+  if (!aliveArr.every((p) => p.answer != null)) return;
+
   checking = true;
   try {
     let changed = false;
-    for (const p of Object.values(players)) {
-      if (p.alive && p.answer != null && !p.result) {
-        const correct = Number(p.answer) === Number(q.answer);
-        const upd = { result: correct ? 'correct' : 'wrong' };
-        if (!correct) {
-          upd.alive = false;
-          upd.correct_answer = q.options[q.answer];
-        }
-        await supabase.from('players').update(upd).eq('id', p.id);
-        Object.assign(p, upd); // 로컬 즉시 반영
-        changed = true;
+    for (const p of aliveArr) {
+      if (p.result != null) continue; // 이미 판정된 경우 건너뜀
+      const correct = Number(p.answer) === Number(q.answer);
+      const upd = { result: correct ? 'correct' : 'wrong' };
+      if (!correct) {
+        upd.alive = false;
+        upd.correct_answer = q.options[q.answer];
       }
+      await supabase.from('players').update(upd).eq('id', p.id);
+      Object.assign(p, upd); // 로컬 즉시 반영
+      changed = true;
     }
     if (changed) await checkFinish();
   } finally {
