@@ -188,18 +188,18 @@ resetBtn.addEventListener('click', () => {
 });
 
 /* ---------- 설정 ---------- */
-function setTarget(v) {
+async function setTarget(v) {
   v = Math.max(1, v);
   game.target_remaining = v; // 로컬 즉시 반영 (render가 되돌리는 것 방지)
   targetInput.value = v;
-  supabase.from('game').update({ target_remaining: v }).eq('id', 1);
+  await supabase.from('game').update({ target_remaining: v }).eq('id', 1);
 }
 targetMinus.addEventListener('click', () => setTarget(Number(targetInput.value) - 1));
 targetPlus.addEventListener('click', () => setTarget(Number(targetInput.value) + 1));
 targetInput.addEventListener('change', () => setTarget(Number(targetInput.value)));
-shuffleToggle.addEventListener('change', () => {
+shuffleToggle.addEventListener('change', async () => {
   game.shuffle = shuffleToggle.checked; // 로컬 즉시 반영
-  supabase.from('game').update({ shuffle: shuffleToggle.checked }).eq('id', 1);
+  await supabase.from('game').update({ shuffle: shuffleToggle.checked }).eq('id', 1);
 });
 
 /* ---------- 문제 관리 ---------- */
