@@ -42,6 +42,7 @@ async function loadQuestions() {
   const { data, error } = await supabase.from('questions').select('*').order('id', { ascending: true });
   if (error) console.error(error);
   questions = data || [];
+  render(); // 문제 로드 즉시 버튼 상태 갱신
 }
 
 async function refreshPlayers() {
