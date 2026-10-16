@@ -108,6 +108,7 @@ async function checkAnswers() {
           upd.correct_answer = q.options[q.answer];
         }
         await supabase.from('players').update(upd).eq('id', p.id);
+        Object.assign(p, upd); // 로컬 즉시 반영
         changed = true;
       }
     }
@@ -146,6 +147,14 @@ async function startGame() {
     alive: true, answer: null, result: null, correct_answer: null,
   }).neq('id', '00000000-0000-0000-0000-000000000000');
 
+  // 로컬 즉시 초기화
+  for (const p of Object.values(players)) {
+    p.alive = true;
+    p.answer = null;
+    p.result = null;
+    p.correct_answer = null;
+  }
+
   await supabase.from('game').update({
     question_order: order, current_number: 0, status: 'playing', current: null,
   }).eq('id', 1);
@@ -170,9 +179,20 @@ async function nextQuestion() {
     answer: null, result: null, correct_answer: null,
   }).eq('alive', true);
 
+  // 로컬 즉시 초기화 (실시간/폴링 대기 없이 화면 갱신)
+  for (const p of Object.values(players)) {
+    if (p.alive) {
+      p.answer = null;
+      p.result = null;
+      p.correct_answer = null;
+    }
+  }
+
   const cur = { number: num, total: game.question_order.length, question: q.question, options: q.options, qid };
   await supabase.from('game').update({ current_number: num, current: cur }).eq('id', 1);
   game.current_number = num;
+  current = cur;
+  render();
 }
 
 async function finishGame() {
