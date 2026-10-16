@@ -32,11 +32,48 @@
               <input id="qrUrl" type="text" readonly />
               <button id="copyBtn">복사</button>
             </div>
-            <button class="btn btn-primary" id="fullscreenQrBtn">🔍 QR 생성</button>
+            <button class="btn btn-primary" id="fullscreenQrBtn">🔍 QR 전체 화면</button>
           </div>
           <div class="qr-hint">휴대폰으로 QR을 스캔하면 참가 화면이 열립니다</div>
         </div>
         <a class="btn btn-primary" href="control.html" style="text-decoration:none;">🎮 관리자 컨트롤 열기</a>
+
+        <div class="card">
+          <h2><span class="ico">⚙️</span> 게임 설정</h2>
+          <div class="setting-row">
+            <div>
+              <div class="label">🏁 종료 기준 인원</div>
+              <div class="sub">이 인원만큼 남으면 게임이 종료됩니다</div>
+            </div>
+            <div class="num-input">
+              <button id="targetMinus">−</button>
+              <input id="targetInput" type="number" min="1" value="5" />
+              <button id="targetPlus">＋</button>
+            </div>
+          </div>
+          <div class="setting-row">
+            <div>
+              <div class="label">🔀 문제 무작위 출제</div>
+              <div class="sub">문제를 섞어서 랜덤 순서로 출제합니다</div>
+            </div>
+            <label class="switch">
+              <input type="checkbox" id="shuffleToggle" checked />
+              <span class="slider"></span>
+            </label>
+          </div>
+        </div>
+
+        <div class="card">
+          <h2><span class="ico">🎮</span> 게임 컨트롤</h2>
+          <div class="btn-row">
+            <button class="btn btn-success" id="startBtn">🚀 게임 시작</button>
+            <button class="btn btn-primary" id="nextBtn" disabled>다음 문제 ➡️</button>
+          </div>
+          <div class="btn-row" style="margin-top:10px">
+            <button class="btn btn-ghost" id="resetBtn">🔄 초기화</button>
+            <button class="btn btn-danger" id="finishBtn" disabled>🏁 즉시 종료</button>
+          </div>
+        </div>
       </div>
 
       <!-- 우측: 통계 + 명단 + 문제 관리 -->
