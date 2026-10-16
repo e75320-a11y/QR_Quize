@@ -246,3 +246,16 @@ header {
   word-break: break-all; text-align: center; max-width: 560px;
 }
 .fs-back { width: auto; padding: 14px 32px; font-size: 16px; }
+
+/* 명단 새로고침 버튼 */
+.refresh-btn {
+  margin-left: auto; font-size: 12px; font-weight: 700; color: var(--text);
+  background: var(--card-2); border: 1px solid var(--border); border-radius: 8px;
+  padding: 6px 12px; cursor: pointer; white-space: nowrap;
+}
+.refresh-btn:active { transform: scale(0.95); }
+
+/* 관리자 컨트롤: 현재 문제 표시 */
+.live-q { font-size: 18px; font-weight: 800; line-height: 1.5; margin-top: 4px; }
+.live-a { font-size: 14px; font-weight: 700; color: var(--green); margin-top: 10px; }
+.live-a span { color: var(--muted); font-weight: 600; }
