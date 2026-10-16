@@ -15,6 +15,7 @@ const joinError = $('joinError');
 const waitName = $('waitName');
 const qNum = $('qNum');
 const qProgress = $('qProgress');
+const pTimer = $('pTimer');
 const qText = $('qText');
 const options = $('options');
 const waitingOthers = $('waitingOthers');
@@ -27,7 +28,7 @@ const lostAnswer = $('lostAnswer');
 
 let myId = localStorage.getItem('pid');
 let me = null;        // 내 플레이어 행
-let game = { status: 'waiting' };
+let game = { status: 'waiting', time_limit: 30, question_started_at: null };
 let current = null;   // game.current (정답 없음)
 
 let renderedQid = null;
@@ -58,10 +59,12 @@ function subscribeMe() {
 }
 
 async function refreshGame() {
-  const { data } = await supabase.from('game').select('status, current').eq('id', 1).maybeSingle();
+  const { data } = await supabase.from('game').select('status, current, time_limit, question_started_at').eq('id', 1).maybeSingle();
   if (data) {
     game.status = data.status || 'waiting';
     current = data.current || null;
+    game.time_limit = data.time_limit || 30;
+    game.question_started_at = data.question_started_at || null;
   }
   render();
 }
@@ -157,6 +160,23 @@ function render() {
     waitingOthers.hidden = true;
   }
 
+  // 시간 초과 처리
+  if (me.result === 'timeout' && !wrongHandled) {
+    wrongHandled = true;
+    disableOptions();
+    resultCard.className = 'p-overlay-card wrong';
+    resultEmoji.textContent = '⏰';
+    resultTitle.textContent = '시간 초과!';
+    resultSub.textContent = `정답은 ${me.correct_answer} 입니다`;
+    lostAnswer.textContent = me.correct_answer;
+    resultOverlay.hidden = false;
+    setTimeout(() => {
+      resultOverlay.hidden = true;
+      show('lost');
+    }, 2000);
+    return;
+  }
+
   // 오답 처리
   if (me.result === 'wrong' && !wrongHandled) {
     wrongHandled = true;
@@ -219,6 +239,21 @@ function escapeHtml(str) {
   return String(str).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 }
 
+function updateTimer() {
+  if (game.status === 'playing' && game.question_started_at) {
+    const timeLimit = game.time_limit || 30;
+    const elapsed = (Date.now() - new Date(game.question_started_at).getTime()) / 1000;
+    const remaining = Math.max(0, Math.ceil(timeLimit - elapsed));
+    const m = String(Math.floor(remaining / 60)).padStart(2, '0');
+    const s = String(remaining % 60).padStart(2, '0');
+    pTimer.textContent = m + ':' + s;
+    pTimer.style.display = '';
+  } else {
+    pTimer.textContent = '';
+    pTimer.style.display = 'none';
+  }
+}
+
 /* 초기 로드 */
 if (myId) {
   subscribeMe();
@@ -230,3 +265,4 @@ show('name');
 /* 폴링 안전장치: 실시간 구독이 동작하지 않아도 일정 간격으로 갱신 */
 setInterval(refreshGame, 2500);
 setInterval(() => { if (myId) refreshMe(); }, 2500);
+setInterval(updateTimer, 1000);

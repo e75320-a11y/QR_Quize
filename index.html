@@ -53,6 +53,17 @@
           </div>
           <div class="setting-row">
             <div>
+              <div class="label">⏱️ 문제 제한 시간 (초)</div>
+              <div class="sub">시간이 지나면 미응답자는 탈락합니다</div>
+            </div>
+            <div class="num-input">
+              <button id="timeMinus">−</button>
+              <input id="timeLimitInput" type="number" min="5" step="5" value="30" />
+              <button id="timePlus">＋</button>
+            </div>
+          </div>
+          <div class="setting-row">
+            <div>
               <div class="label">🔀 문제 무작위 출제</div>
               <div class="sub">문제를 섞어서 랜덤 순서로 출제합니다</div>
             </div>
@@ -114,6 +125,10 @@
             <span class="ap-num"><b id="apAnswered">0</b> / <span id="apAlive">0</span> 명</span>
           </div>
           <div class="ap-bar"><div class="ap-fill" id="apFill"></div></div>
+          <div class="ap-row" style="margin-top:10px">
+            <span class="ap-label">⏱️ 남은 시간</span>
+            <span class="ap-timer" id="apTimer">--:--</span>
+          </div>
           <div class="ap-sub" id="apSub">게임 시작 전입니다</div>
         </div>
       </div>

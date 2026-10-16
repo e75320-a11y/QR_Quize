@@ -28,7 +28,9 @@ create table if not exists public.game (
   question_order jsonb not null default '[]'::jsonb,
   target_remaining int not null default 5,
   shuffle boolean not null default true,
-  current jsonb
+  current jsonb,
+  time_limit int not null default 30,
+  question_started_at timestamptz
 );
 
 -- 2) 실시간 publication 존재 확인 후 생성
@@ -60,6 +62,6 @@ alter table public.players disable row level security;
 alter table public.game disable row level security;
 
 -- 5) 기본 게임 상태 행 생성
-insert into public.game (id, status, current_number, question_order, target_remaining, shuffle, current)
-values (1, 'waiting', 0, '[]'::jsonb, 5, true, null)
+insert into public.game (id, status, current_number, question_order, target_remaining, shuffle, current, time_limit, question_started_at)
+values (1, 'waiting', 0, '[]'::jsonb, 5, true, null, 30, null)
 on conflict (id) do nothing;

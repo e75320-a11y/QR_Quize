@@ -53,6 +53,11 @@
   padding: 8px 16px; border-radius: 999px;
 }
 .p-q-progress { font-size: 13px; color: var(--muted); font-weight: 700; }
+.p-q-timer {
+  font-size: 18px; font-weight: 900; color: var(--amber);
+  background: rgba(245, 158, 11, 0.12); border: 1px solid rgba(245, 158, 11, 0.4);
+  border-radius: 999px; padding: 6px 14px; font-variant-numeric: tabular-nums;
+}
 
 .p-q-card { padding: 28px 20px; }
 .p-q-text { font-size: 22px; font-weight: 900; line-height: 1.5; margin-bottom: 24px; letter-spacing: -0.5px; }

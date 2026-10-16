@@ -9,6 +9,8 @@ let game = {
   question_order: [],
   target_remaining: 5,
   shuffle: true,
+  time_limit: 30,
+  question_started_at: null,
 };
 let current = null; // game.current
 
@@ -21,6 +23,10 @@ const targetInput = $('targetInput');
 const targetMinus = $('targetMinus');
 const targetPlus = $('targetPlus');
 const shuffleToggle = $('shuffleToggle');
+
+const timeLimitInput = $('timeLimitInput');
+const timeMinus = $('timeMinus');
+const timePlus = $('timePlus');
 
 const startBtn = $('startBtn');
 const nextBtn = $('nextBtn');
@@ -69,6 +75,8 @@ async function refreshGame() {
     question_order: v.question_order || [],
     target_remaining: v.target_remaining || 5,
     shuffle: typeof v.shuffle === 'undefined' ? true : v.shuffle,
+    time_limit: v.time_limit || 30,
+    question_started_at: v.question_started_at || null,
   };
   current = v.current || null;
   render();
@@ -96,23 +104,38 @@ async function checkAnswers() {
   const aliveArr = Object.values(players).filter((p) => p.alive);
   if (aliveArr.length === 0) return;
 
-  // 모든 살아있는 플레이어가 응답할 때까지 기다림
-  if (!aliveArr.every((p) => p.answer != null)) return;
+  // 시간 초과 여부
+  const timeLimit = game.time_limit || 30;
+  const timedOut = game.question_started_at
+    ? (Date.now() - new Date(game.question_started_at).getTime()) >= timeLimit * 1000
+    : false;
+
+  // 모든 응답 또는 시간 초과 시 판정
+  const allAnswered = aliveArr.every((p) => p.answer != null);
+  if (!allAnswered && !timedOut) return;
 
   checking = true;
   try {
     let changed = false;
     for (const p of aliveArr) {
       if (p.result != null) continue; // 이미 판정된 경우 건너뜀
-      const correct = Number(p.answer) === Number(q.answer);
-      const upd = { result: correct ? 'correct' : 'wrong' };
-      if (!correct) {
-        upd.alive = false;
-        upd.correct_answer = q.options[q.answer];
+      if (p.answer == null) {
+        // 시간 초과로 미응답 → 탈락
+        const upd = { result: 'timeout', alive: false, correct_answer: q.options[q.answer] };
+        await supabase.from('players').update(upd).eq('id', p.id);
+        Object.assign(p, upd);
+        changed = true;
+      } else {
+        const correct = Number(p.answer) === Number(q.answer);
+        const upd = { result: correct ? 'correct' : 'wrong' };
+        if (!correct) {
+          upd.alive = false;
+          upd.correct_answer = q.options[q.answer];
+        }
+        await supabase.from('players').update(upd).eq('id', p.id);
+        Object.assign(p, upd);
+        changed = true;
       }
-      await supabase.from('players').update(upd).eq('id', p.id);
-      Object.assign(p, upd); // 로컬 즉시 반영
-      changed = true;
     }
     if (changed) await checkFinish();
   } finally {
@@ -123,7 +146,7 @@ async function checkAnswers() {
 async function checkFinish() {
   if (game.status !== 'playing') return;
   const alive = Object.values(players).filter((p) => p.alive);
-  if (alive.length > 0 && alive.length <= game.target_remaining) {
+  if (alive.length <= game.target_remaining) {
     await supabase.from('game').update({ status: 'finished' }).eq('id', 1);
   }
 }
@@ -191,9 +214,11 @@ async function nextQuestion() {
   }
 
   const cur = { number: num, total: game.question_order.length, question: q.question, options: q.options, qid };
-  await supabase.from('game').update({ current_number: num, current: cur }).eq('id', 1);
+  const startedAt = new Date().toISOString();
+  await supabase.from('game').update({ current_number: num, current: cur, question_started_at: startedAt }).eq('id', 1);
   game.current_number = num;
   current = cur;
+  game.question_started_at = startedAt;
   render();
 }
 
@@ -229,6 +254,16 @@ shuffleToggle.addEventListener('change', async () => {
   game.shuffle = shuffleToggle.checked; // 로컬 즉시 반영
   await supabase.from('game').update({ shuffle: shuffleToggle.checked }).eq('id', 1);
 });
+
+function setTimeLimit(v) {
+  v = Math.max(5, Math.min(600, v));
+  game.time_limit = v; // 로컬 즉시 반영
+  timeLimitInput.value = v;
+  supabase.from('game').update({ time_limit: v }).eq('id', 1);
+}
+timeMinus.addEventListener('click', () => setTimeLimit(Number(timeLimitInput.value) - 5));
+timePlus.addEventListener('click', () => setTimeLimit(Number(timeLimitInput.value) + 5));
+timeLimitInput.addEventListener('change', () => setTimeLimit(Number(timeLimitInput.value)));
 
 /* ---------- 문제 관리 ---------- */
 function updateAnswerSelect() {
@@ -300,6 +335,7 @@ function render() {
   // 설정 반영
   targetInput.value = game.target_remaining;
   shuffleToggle.checked = game.shuffle;
+  timeLimitInput.value = game.time_limit;
 
   // 문제 목록
   questionList.innerHTML = '';
