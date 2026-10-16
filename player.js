@@ -1,4 +1,4 @@
-const socket = io();
+import { supabase } from './supabase-config.js';
 
 const $ = (id) => document.getElementById(id);
 const screens = {
@@ -24,14 +24,58 @@ const resultTitle = $('resultTitle');
 const resultSub = $('resultSub');
 const lostAnswer = $('lostAnswer');
 
+let myId = localStorage.getItem('pid');
+let me = null;        // 내 플레이어 행
+let game = { status: 'waiting' };
+let current = null;   // game.current (정답 없음)
+
+let renderedQid = null;
+let answered = false;
+let correctHandled = false;
+let wrongHandled = false;
+
 function show(active) {
   Object.entries(screens).forEach(([key, el]) => {
     el.hidden = key !== active;
   });
 }
 
-/* 이름 입력 */
-joinBtn.addEventListener('click', () => {
+/* ---------- 실시간 구독 ---------- */
+supabase
+  .channel('player-game')
+  .on('postgres_changes', { event: '*', schema: 'public', table: 'game' }, () => { refreshGame(); })
+  .subscribe();
+
+supabase
+  .channel('player-me')
+  .on('postgres_changes', { event: '*', schema: 'public', table: 'players', filter: myId ? `id=eq.${myId}` : 'id=eq.00000000-0000-0000-0000-000000000000' }, () => { refreshMe(); })
+  .subscribe();
+
+async function refreshGame() {
+  const { data } = await supabase.from('game').select('status, current').eq('id', 1).maybeSingle();
+  if (data) {
+    game.status = data.status || 'waiting';
+    current = data.current || null;
+  }
+  render();
+}
+
+async function refreshMe() {
+  if (!myId) return;
+  const { data } = await supabase.from('players').select('*').eq('id', myId).maybeSingle();
+  me = data || null;
+  if (!me) {
+    localStorage.removeItem('pid');
+    myId = null;
+    renderedQid = null;
+    show('name');
+    return;
+  }
+  render();
+}
+
+/* ---------- 이름 입력 ---------- */
+joinBtn.addEventListener('click', async () => {
   const name = nameInput.value.trim();
   if (!name) {
     joinError.textContent = '이름을 입력해주세요.';
@@ -39,59 +83,86 @@ joinBtn.addEventListener('click', () => {
   }
   joinError.textContent = '';
   joinBtn.disabled = true;
-  socket.emit('player:join', name);
+
+  const id = crypto.randomUUID();
+  const { error } = await supabase.from('players').insert({
+    id, name, alive: true, answer: null, result: null, correct_answer: null,
+  });
+
+  if (error) {
+    joinError.textContent = '참가에 실패했습니다. 다시 시도해주세요.';
+    joinBtn.disabled = false;
+    return;
+  }
+
+  localStorage.setItem('pid', id);
+  myId = id;
+  await refreshMe();
+  joinBtn.disabled = false;
 });
 
 nameInput.addEventListener('keydown', (e) => {
   if (e.key === 'Enter') joinBtn.click();
 });
 
-/* 소켓 이벤트 */
-socket.on('joined', (data) => {
-  waitName.textContent = data.name;
-  show('waiting');
-});
+/* ---------- 렌더링 ---------- */
+function render() {
+  if (!me) { show('name'); return; }
+  if (game.status === 'waiting') { waitName.textContent = me.name; show('waiting'); return; }
+  if (game.status === 'finished') { show(me.alive ? 'won' : 'lost'); return; }
 
-socket.on('error', (msg) => {
-  joinError.textContent = msg;
-  joinBtn.disabled = false;
-});
+  // playing 상태
+  if (!current) { show('waiting'); return; }
 
-socket.on('question', (data) => {
-  qNum.textContent = `문제 ${data.number}`;
-  qProgress.textContent = `${data.number} / ${data.total}`;
-  qText.textContent = data.question;
-  renderOptions(data.options);
-  show('question');
-});
+  // 새 문제 렌더링
+  if (renderedQid !== current.qid) {
+    renderedQid = current.qid;
+    answered = false;
+    correctHandled = false;
+    wrongHandled = false;
+    qNum.textContent = `문제 ${current.number}`;
+    qProgress.textContent = `${current.number} / ${current.total}`;
+    qText.textContent = current.question;
+    renderOptions(current.options);
+    show('question');
+  }
 
-socket.on('result', (data) => {
-  markOptions(data.correctAnswer, data.correct);
-  if (data.correct) {
-    resultCard.className = 'p-overlay-card correct';
-    resultEmoji.textContent = '🎉';
-    resultTitle.textContent = '정답입니다!';
-    resultSub.textContent = '다음 문제를 기다려주세요';
-    showResultOverlay();
-    setTimeout(() => {
-      resultOverlay.hidden = true;
-    }, 1500);
-  } else {
+  // 오답 처리
+  if (me.result === 'wrong' && !wrongHandled) {
+    wrongHandled = true;
+    markOptions(me.answer, true);
     resultCard.className = 'p-overlay-card wrong';
     resultEmoji.textContent = '😢';
     resultTitle.textContent = '아쉽지만 오답입니다';
-    resultSub.textContent = `정답은 ${data.answerText} 입니다`;
-    lostAnswer.textContent = data.answerText;
-    showResultOverlay();
+    resultSub.textContent = `정답은 ${me.correct_answer} 입니다`;
+    lostAnswer.textContent = me.correct_answer;
+    resultOverlay.hidden = false;
     setTimeout(() => {
       resultOverlay.hidden = true;
       show('lost');
     }, 2000);
+    return;
   }
-});
 
-socket.on('won', () => show('won'));
-socket.on('lost', () => show('lost'));
+  // 정답 처리
+  if (me.result === 'correct' && !correctHandled) {
+    correctHandled = true;
+    markOptions(me.answer, false);
+    resultCard.className = 'p-overlay-card correct';
+    resultEmoji.textContent = '🎉';
+    resultTitle.textContent = '정답입니다!';
+    resultSub.textContent = '다음 문제를 기다려주세요';
+    resultOverlay.hidden = false;
+    setTimeout(() => { resultOverlay.hidden = true; }, 1500);
+    return;
+  }
+
+  // 응답 제출 후 결과 대기
+  if (me.answer != null || me.result) {
+    answered = true;
+    disableOptions();
+  }
+}
 
 function renderOptions(opts) {
   options.innerHTML = '';
@@ -99,35 +170,32 @@ function renderOptions(opts) {
     const btn = document.createElement('button');
     btn.className = 'p-option';
     btn.innerHTML = `<span class="o-num">${i + 1}</span><span>${escapeHtml(opt)}</span>`;
-    btn.addEventListener('click', () => {
-      // 이미 응답했다면 무시
-      if (options.dataset.answered === '1') return;
-      options.dataset.answered = '1';
+    btn.addEventListener('click', async () => {
+      if (answered || me.answer != null) return;
+      answered = true;
       disableOptions();
-      socket.emit('player:answer', i);
+      await supabase.from('players').update({ answer: i }).eq('id', myId);
     });
     options.appendChild(btn);
   });
-  options.dataset.answered = '0';
 }
 
 function disableOptions() {
   options.querySelectorAll('.p-option').forEach((b) => b.classList.add('disabled'));
 }
 
-function markOptions(correctIdx, correct) {
+function markOptions(chosen, isWrong) {
   options.querySelectorAll('.p-option').forEach((b, i) => {
-    if (i === correctIdx) b.classList.add('correct');
-    if (!correct && i !== correctIdx) b.classList.add('disabled');
+    if (i === chosen) b.classList.add(isWrong ? 'wrong' : 'correct');
+    b.classList.add('disabled');
   });
-}
-
-function showResultOverlay() {
-  resultOverlay.hidden = false;
 }
 
 function escapeHtml(str) {
   return String(str).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 }
 
+/* 초기 로드 */
+if (myId) refreshMe();
+refreshGame();
 show('name');

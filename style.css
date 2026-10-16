@@ -150,13 +150,14 @@ header {
 .btn-row .btn:first-child:last-child { grid-column: span 2; }
 
 /* Stats */
-.stats { display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; }
-@media (max-width: 700px) { .stats { grid-template-columns: repeat(2, 1fr); } }
+.stats { display: grid; grid-template-columns: repeat(5, 1fr); gap: 12px; }
+@media (max-width: 1050px) { .stats { grid-template-columns: repeat(3, 1fr); } }
+@media (max-width: 620px) { .stats { grid-template-columns: repeat(2, 1fr); } }
 .stat {
   background: var(--card); border: 1px solid var(--border); border-radius: 18px;
-  padding: 20px; position: relative; overflow: hidden;
+  padding: 16px; position: relative; overflow: hidden;
 }
-.stat .num { font-size: 42px; font-weight: 900; letter-spacing: -2px; line-height: 1; }
+.stat .num { font-size: 34px; font-weight: 900; letter-spacing: -1.5px; line-height: 1; }
 .stat .cap { font-size: 13px; color: var(--muted); margin-top: 8px; font-weight: 600; }
 .stat::after {
   content: ''; position: absolute; right: -20px; top: -20px; width: 90px; height: 90px;
@@ -167,6 +168,7 @@ header {
 .stat.c-red { color: var(--red); }
 .stat.c-amber { color: var(--amber); }
 .stat.c-accent { color: #a5b4fc; }
+.stat.c-purple { color: #c084fc; }
 
 /* Alive names */
 .chips { display: flex; flex-wrap: wrap; gap: 8px; }

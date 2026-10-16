@@ -4,7 +4,12 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>온라인 QR 퀴즈 서바이벌 - 관리자</title>
-  <link rel="stylesheet" href="/style.css" />
+  <link rel="stylesheet" href="style.css" />
+  <style>
+    .live-q { font-size: 18px; font-weight: 800; line-height: 1.5; margin-top: 4px; }
+    .live-a { font-size: 14px; font-weight: 700; color: var(--green); margin-top: 10px; }
+    .live-a span { color: var(--muted); font-weight: 600; }
+  </style>
 </head>
 <body>
   <header>
@@ -85,6 +90,10 @@
             <div class="num" id="statQuestion">0</div>
             <div class="cap">📝 현재 문제</div>
           </div>
+          <div class="stat c-purple">
+            <div class="num" id="statCorrect">0</div>
+            <div class="cap">✅ 정답자 수</div>
+          </div>
           <div class="stat c-red">
             <div class="num" id="statEliminated">0</div>
             <div class="cap">❌ 탈락 인원</div>
@@ -93,6 +102,12 @@
             <div class="num" id="statAlive">0</div>
             <div class="cap">✅ 남은 인원</div>
           </div>
+        </div>
+
+        <div class="card" id="liveQuestionCard" hidden>
+          <h2><span class="ico">🎯</span> 현재 출제 중인 문제 <span id="answeredCount"></span></h2>
+          <p class="live-q" id="liveQuestionText"></p>
+          <p class="live-a">✔ 정답: <span id="liveAnswerText"></span></p>
         </div>
 
         <div class="card">
@@ -122,13 +137,14 @@
             <button class="btn btn-primary" id="addQuestionBtn">➕ 문제 추가</button>
           </div>
           <div class="q-list" id="questionList"></div>
-          <div class="muted-note">💡 보기는 2개 이상 입력해야 합니다. 추가된 문제는 자동 저장됩니다.</div>
+          <div class="muted-note">💡 보기는 2개 이상 입력해야 합니다. 추가된 문제는 데이터베이스에 저장됩니다.</div>
         </div>
       </div>
     </div>
   </div>
 
-  <script src="/socket.io/socket.io.js"></script>
-  <script src="/admin.js"></script>
+  <!-- QR 생성 라이브러리 -->
+  <script src="https://cdn.jsdelivr.net/npm/qrcode@1.5.3/build/qrcode.min.js"></script>
+  <script type="module" src="admin.js"></script>
 </body>
 </html>
