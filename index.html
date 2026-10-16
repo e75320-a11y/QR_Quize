@@ -37,6 +37,7 @@
               <input id="qrUrl" type="text" readonly />
               <button id="copyBtn">복사</button>
             </div>
+            <button class="btn btn-primary" id="fullscreenQrBtn">🔍 QR 생성</button>
           </div>
           <div class="qr-hint">휴대폰으로 QR을 스캔하면 참가 화면이 열립니다</div>
         </div>
@@ -143,12 +144,17 @@
     </div>
   </div>
 
-  <!-- Firebase SDK -->
-  <script src="https://www.gstatic.com/firebasejs/10.12.5/firebase-app-compat.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/10.12.5/firebase-database-compat.js"></script>
-  <!-- QR 생성 라이브러리 -->
-  <script src="https://cdn.jsdelivr.net/npm/qrcode@1.5.3/build/qrcode.min.js"></script>
-  <script src="firebase-config.js"></script>
-  <script src="admin.js"></script>
+  <!-- 전체 화면 QR -->
+  <div id="fullscreenQr" hidden>
+    <div class="fs-qr-box">
+      <img id="fullscreenQrImage" alt="QR 코드" />
+      <p id="fullscreenQrUrl"></p>
+    </div>
+    <button class="btn btn-ghost fs-back" id="fullscreenBackBtn">⬅️ 돌아가기</button>
+  </div>
+
+  <!-- QR (외부 라이브러리 불필요) -->
+  <script src="qr.js"></script>
+  <script type="module" src="admin.js"></script>
 </body>
 </html>
