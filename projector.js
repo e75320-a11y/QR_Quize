@@ -49,6 +49,9 @@ const apFill = $('apFill');
 const apSub = $('apSub');
 const apTimer = $('apTimer');
 
+const cqNum = $('cqNum');
+const cqText = $('cqText');
+
 /* ---------- 데이터 로드 ---------- */
 async function loadQuestions() {
   const { data, error } = await supabase.from('questions').select('*').order('id', { ascending: true });
@@ -294,6 +297,18 @@ function render() {
   statCorrect.textContent = correctCount;
   statEliminated.textContent = playerCount - aliveCount;
   statAlive.textContent = aliveCount;
+
+  // 현재 문제 표시
+  if (game.status === 'playing' && current) {
+    cqNum.textContent = `문제 ${current.number} / ${game.question_order.length}`;
+    cqText.textContent = current.question;
+  } else if (game.status === 'waiting') {
+    cqNum.textContent = '대기 중';
+    cqText.textContent = '게임을 시작하면 문제가 표시됩니다';
+  } else {
+    cqNum.textContent = '종료';
+    cqText.textContent = '게임이 종료되었습니다';
+  }
 
   // 현재 문제 응답 현황
   apAnswered.textContent = answeredTotal;

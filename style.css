@@ -252,6 +252,17 @@ header {
 }
 .fs-back { width: auto; padding: 14px 32px; font-size: 16px; }
 
+/* 현재 문제 카드 */
+.cq-num {
+  display: inline-block; font-size: 14px; font-weight: 800;
+  background: var(--accent); color: #fff; border-radius: 999px;
+  padding: 6px 14px; margin-bottom: 12px;
+}
+.cq-text {
+  font-size: 26px; font-weight: 900; line-height: 1.45; letter-spacing: -0.5px;
+  word-break: keep-all;
+}
+
 /* 명단 새로고침 버튼 */
 .refresh-btn {
   margin-left: auto; font-size: 12px; font-weight: 700; color: var(--text);
