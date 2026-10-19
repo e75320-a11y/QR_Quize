@@ -255,11 +255,11 @@ shuffleToggle.addEventListener('change', async () => {
   await supabase.from('game').update({ shuffle: shuffleToggle.checked }).eq('id', 1);
 });
 
-function setTimeLimit(v) {
+async function setTimeLimit(v) {
   v = Math.max(5, Math.min(600, v));
   game.time_limit = v; // 로컬 즉시 반영
   timeLimitInput.value = v;
-  supabase.from('game').update({ time_limit: v }).eq('id', 1);
+  await supabase.from('game').update({ time_limit: v }).eq('id', 1);
 }
 timeMinus.addEventListener('click', () => setTimeLimit(Number(timeLimitInput.value) - 5));
 timePlus.addEventListener('click', () => setTimeLimit(Number(timeLimitInput.value) + 5));
